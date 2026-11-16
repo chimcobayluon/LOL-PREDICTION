@@ -6,7 +6,7 @@ Một project nhỏ dự đoán tỉ lệ thắng của 2 bên xanh và đỏ d�
 
 Dữ liệu của mô hình được tổng hợp từ 2 file:
 - champion.json: Lưu thông tin của tướng
-- matches.csv*: Lưu thông tin của trận đấu
+- matches.csv: Lưu thông tin của trận đấu
 
 Mô hình được học từ lịch sử đấu trong matches.csv về số trận thắng của các tướng, team comp, đội xanh/đỏ
 
