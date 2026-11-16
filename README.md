@@ -13,6 +13,7 @@ Mô hình được học từ lịch sử đấu trong matches.csv về số tr�
 Trong từng trận các tướng của đội xanh được gán nhãn 1, đội đỏ gán nhãn -1 và các tướng khác gán nhãn 0, dự liệu được nhân đôi khiến bộ dữ liệu được tăng lên khoảng 40.000 trận vì lí do sau: A đỏ B xanh, xanh thắng <=> A xanh B đỏ, đỏ thắng
 
 Mô hình sử dụng: Gradient Boosting
+
 Lí do sử dụng: Decision Trees có khả năng học một cách phi tuyến, ví dụ: cặp đôi phối hợp tốt Yasuo + Malphite, kèo khắc chế Master Yi >< Rammus
 
 # Set up
