@@ -14,7 +14,9 @@ Trong từng trận các tướng của đội xanh được gán nhãn 1, độ
 
 Mô hình sử dụng: Gradient Boosting
 
-Lí do sử dụng: Decision Trees có khả năng học một cách phi tuyến, ví dụ: cặp đôi phối hợp tốt Yasuo + Malphite, kèo khắc chế Master Yi >< Rammus
+Lí do sử dụng: 
+- Decision Trees có khả năng học một cách phi tuyến, ví dụ: cặp đôi phối hợp tốt Yasuo + Malphite, kèo khắc chế Master Yi >< Rammus
+- Mỗi cây sẽ phân nhánh dựa trên việc có mặt hay vắng mặt của các cặp tướng cụ thể
 
 # Set up
 
