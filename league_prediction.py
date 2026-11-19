@@ -132,30 +132,160 @@ def pred(blue_team, red_team):
 def input_team(team):
     while True:
         print('NHẬP 5 TƯỚNG', team, '(CÁCH NHAU DẤU PHẨY):')
-        inp = input('Nhập 5 tướng: ').strip()
+        inp = input('NHẬP 5 TƯỚNG: ').strip()
         if not inp: continue
         champs = [c.strip() for c in inp.split(',') if c.strip()]
         if len(champs) != 5:
-            print('Nhập đủ 5 tướng cách nhau bằng dấu phẩy!\n')
+            print('NHẬP ĐỦ 5 TƯỚNG CÁCH NHAU BẰNG DẤU PHẨY!\n')
             continue
         miss = [c for c in champs if proc(c) not in lookup]
         if miss:
-            print('Không tìm thấy tướng:', ','.join(miss), '!\n')
+            print('KHÔNG TÌM THẤY TƯỚNG:', ','.join(miss), '!\n')
             continue
         processed_champs = [champ_info[lookup[proc(c)]]['name'] for c in champs]
         return processed_champs
+
+def recommender(my_team, opp_team, my_side='blue', role=None, top_k = 5):
+    my_riotid = [lookup[proc(c)] for c in my_team if proc(c) in lookup]
+    opp_riotid = [lookup[proc(c)] for c in opp_team if proc(c) in lookup]
+
+    chosen = set(my_riotid + opp_riotid)
+
+    # Dự đoán tỉ lệ thắng hiện tại
+    my_val = 1
+    opp_val = -1
+    if my_side != 'blue': my_val, opp_val = opp_val, my_val
+    cur = np.zeros((1, champ_count), dtype = np.int32)
+    for riotid in my_riotid: cur[0][riotid_to_idx[riotid]] = my_val
+    for riotid in opp_riotid: cur[0][riotid_to_idx[riotid]] = opp_val
+    cur_winrate = model.predict_proba(cur)[0, 1]
+
+    # Dự đoán tỉ lệ thắng từng tướng
+    candidates = []
+    for riotid in sorted_id:
+        if riotid in chosen: continue
+
+        info = champ_info[riotid]
+        tag = info.get('tags', [])
+
+        if role and role.lower() != 'all':
+            if not any(role.lower() in t.lower() for t in tag):
+                continue
+
+        cur_copy = cur.copy()
+        cur_copy[0][riotid_to_idx[riotid]] = my_val
+        new_winrate = model.predict_proba(cur_copy)[0, 1]
+
+        delta = new_winrate - cur_winrate
+
+        candidates.append({
+            'name' : info['name'],
+            'tag' : ','.join(tag),
+            'new_winrate' : new_winrate,
+            'delta' : delta
+        })
+
+    # Sắp xếp
+    candidates.sort(key = lambda x: x['delta'], reverse = True)
+    best_pick = candidates[:top_k]
+    worst_pick = sorted(candidates, key=lambda x: x['delta'])[:3]
+    side_label = "🔵 ĐỘI XANH" if my_side == 'blue' else "🔴 ĐỘI ĐỎ"
+
+    print("\n" + "=" * 65)
+    print('Phe của bạn:', side_label)
+    print('Đội bạn đã chọn:', ','.join(my_team) if my_team else '(Chưa chọn tướng nào)')
+    print('Đội địch đã chọn:', ','.join(opp_team) if opp_team else '(Chưa chọn tướng nào)')
+    if role and role.lower() != 'all':
+        print('Hệ tướng yêu cầu:', role)
+    print('Tỉ lệ thắng hiện tại:', str(round(cur_winrate * 100, 2)) + '%')
+    print("=" * 65)
+    print('Top 5 tướng tối ưu nên pick:')
+    for id, c in enumerate(best_pick, 1):
+        print(str(id) + '/', c['name'], '-->', 'Tỉ lệ thắng mới:', str(round(c['new_winrate'] * 100, 2)) + '%')
+    print('Top 3 tướng cần tránh pick:')
+    for id, c in enumerate(worst_pick, 1):
+        print(str(id) + '/', c['name'], '-->', 'Tỉ lệ thắng mới:', str(round(c['new_winrate'] * 100, 2)) + '%')
+    print("=" * 65 + "\n")
+
+def input_recommender():
+    print("Chọn phe của bạn:")
+    print("  [1] 🔵 Đội Xanh (Blue Team)")
+    print("  [2] 🔴 Đội Đỏ (Red Team)")
+    inp = input('Nhập lựa chọn của bạn:').strip()
+    my_side = 'blue' if inp == '1' else 'red'
+
+    # Nhập tướng đội mình
+    while True:
+        print('Nhập tướng đội bạn đã chọn! (tối đa 4 tướng, cách nhau bởi dấu phẩy): ')
+        my_inp = input('Tướng đội bạn: ').strip()
+        my_pick = [c.strip() for c in my_inp.split(',') if c.strip()]
+        if len(my_pick) > 4:
+            print('Chỉ nhập tối đa 4 tướng!')
+            continue
+        miss = [proc(c) for c in my_pick if proc(c) not in lookup]
+        if miss:
+            print('Không tìm thấy tướng:', ', '.join(miss), '!')
+            continue
+        my_pick = [champ_info[lookup[proc(c)]]['name'] for c in my_pick]
+        break
+
+    # Nhập tướng đội địch
+    while True:
+            print('Nhập tướng đội địch đã chọn! (tối đa 4 tướng, cách nhau bởi dấu phẩy): ')
+            opp_inp = input('Tướng đội địch: ').strip()
+            opp_pick = [c.strip() for c in opp_inp.split(',') if c.strip()]
+            if len(opp_pick) > 5:
+                print('Chỉ nhập tối đa 5 tướng!')
+                continue
+            miss = [proc(c) for c in opp_pick if proc(c) not in lookup]
+            if miss:
+                print('Không tìm thấy tướng:', ', '.join(miss), '!')
+                continue
+            opp_pick = [champ_info[lookup[proc(c)]]['name'] for c in opp_pick]
+            break
+
+    lap = set(my_pick).intersection(set(opp_pick))
+    if lap:
+        print('Có tướng bị trùng giữa 2 phe:', ', '.join(lap), '!', 'Vui lòng nhập lại.')
+        return
+
+    print('Lọc theo vai trò tướng cần tìm:')
+    print('  [0] Tất cả hệ (All)')
+    print('  [1] Fighter (Đấu Sĩ)')
+    print('  [2] Mage (Pháp Sư)')
+    print('  [3] Marksman (Xạ Thủ)')
+    print('  [4] Assassin (Sát Thủ)')
+    print('  [5] Tank (Đỡ Đòn)')
+    print('  [6] Support (Hỗ Trợ)')
+    choice = input('Nhập lựa chọn của bạn:').strip()
+    mapping = {'1': 'Fighter',
+               '2': 'Mage',
+               '3': 'Marksman',
+               '4': 'Assassin',
+               '5': 'Tank',
+               '6': 'Support'}
+    role = mapping.get(choice, None)
+
+    recommender(my_pick, opp_pick, my_side, role, top_k = 5)
     
-print("=" * 65)
-print('NHẬP ĐỘI HÌNH:')
 while True:
-    blue_team = input_team('ĐỘI XANH')
-    red_team = input_team('ĐỘI ĐỎ')
+    print('=' * 65)
+    print('CHỌN CHỨC NĂNG:')
+    print('  [1] DỰ ĐOÁN TỈ LỆ THẮNG 5 VS 5')
+    print('  [2] GỢI Ý LƯỢT PICK TỐI ƯU')
+    print('  [3] THOÁT')
+    choice = input('NHẬP LỰA CHỌN CỦA BẠN (1, 2 hoặc 3):').strip()
 
-    pred(blue_team, red_team)
-
-    typ = input("DỰ ĐOÁN TRẬN KHÁC? (GÕ 'q' HOẶC 'k' ĐỂ THOÁT, ENTER ĐỂ TIẾP TỤC)").strip().lower()
-    if typ in ['q', 'quit', 'exit', 'k']:
+    if choice == '3':
         print('TẠM BIỆT!')
         break
-    print("-" * 65 + '\n')
 
+    elif choice == '1':
+        blue_team = input_team('ĐỘI XANH')
+        red_team = input_team('ĐỘI ĐỎ')
+        pred(blue_team, red_team)
+
+    elif choice == '2':
+        input_recommender()
+
+    else: print('LỰA CHỌN KHÔNG HỢP LỆ!')
